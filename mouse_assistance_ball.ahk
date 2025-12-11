@@ -36,7 +36,7 @@ items := [
 
 ; ====== Visual Settings ======
 radius := 130                    ; Distance from center to buttons
-btnW := 120                       ; Button width
+btnW := 150                       ; Button width
 btnH := 45                        ; Button height
 centerSize := 60                  ; Center circle size
 bgAlpha := 220                    ; Background overlay opacity (0-255)
