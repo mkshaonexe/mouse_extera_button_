@@ -21,35 +21,47 @@ XButton1::Send("#v")            ; Back button → Clipboard history (Win+V)
 ; Radial Launcher Configuration
 ; ------------------------------------------------------------
 CoordMode("Mouse", "Screen")
-OnMessage(0x201, GuiGlobalClick)  ; Watch for left-clicks while menu is open
+OnMessage(0x200, OnHover)  ; Watch for mouse movements for hover effects
 
 ; ====== Customize your menu items ======
 items := [
-    {name: "YouTube", target: "https://youtube.com"},
-    {name: "Files", target: "explorer.exe"},
-    {name: "AI", target: "C:\Users\MK Shaon\AppData\Local\Programs\Antigravity\Antigravity.exe"},
-    {name: "Android Studio", target: "C:\Program Files\Android\Android Studio\bin\studio64.exe"},
-    {name: "ChatGPT", target: "https://chat.openai.com"},
-    {name: "Notepad", target: "notepad.exe"}
+    {name: "YouTube", icon: "📺", target: "https://youtube.com"},
+    {name: "Files", icon: "📂", target: "explorer.exe"},
+    {name: "AI", icon: "🤖", target: "C:\Users\MK Shaon\AppData\Local\Programs\Antigravity\Antigravity.exe"},
+    {name: "Android Studio", icon: "📱", target: "C:\Program Files\Android\Android Studio\bin\studio64.exe"},
+    {name: "ChatGPT", icon: "💬", target: "https://chat.openai.com"},
+    {name: "Notepad", icon: "📝", target: "notepad.exe"}
 ]
 ; =======================================
 
 ; ====== Visual Settings ======
-radius := 120                    ; Distance from center to buttons
-btnW := 110                       ; Button width
-btnH := 40                        ; Button height
-centerSize := 50                  ; Center circle size
-bgAlpha := 200                    ; Background overlay opacity (0-255)
-btnFontSize := 10                 ; Button font size
-centerFontSize := 12              ; Center button font size
+radius := 130                    ; Distance from center to buttons
+btnW := 120                       ; Button width
+btnH := 45                        ; Button height
+centerSize := 60                  ; Center circle size
+bgAlpha := 220                    ; Background overlay opacity (0-255)
+btnFontSize := 11                 ; Button font size
+centerFontSize := 14              ; Center button font size
+; Colors
+colBackground := "000000"         ; Main GUI background
+colBtnNormal := "1E1E2E"          ; Button normal color (Dark Slate)
+colBtnHover := "89B4FA"           ; Button hover color (Bright Blue)
+colTextNormal := "CDD6F4"         ; Text color
+colTextHover := "11111B"          ; Text color on hover
+colCenterNormal := "313244"       ; Center button color
+colCenterHover := "F38BA8"        ; Center button hover (Red/Pink)
 ; ==============================
 
-; Global reference to menu GUI
+; Global reference to menu GUI and controls
 global menuGuiRef := ""
+global hoverControls := Map()  ; Stores control HWND -> Item Data
 
 CreateMenuGui() {
     static buttons := []
-    global items, radius, btnW, btnH, bgAlpha, centerSize, btnFontSize, centerFontSize, menuGuiRef
+    global items, radius, btnW, btnH, bgAlpha, centerSize, btnFontSize, centerFontSize, menuGuiRef, hoverControls
+    
+    ; Reset hover controls
+    hoverControls := Map()
 
     ; Close existing menu if open
     if menuGuiRef != "" && IsObject(menuGuiRef) {
@@ -71,10 +83,14 @@ CreateMenuGui() {
         centerY := A_ScreenHeight - maxRadius
 
     ; Create fullscreen overlay
-    menuGuiRef := Gui("+AlwaysOnTop -Caption +ToolWindow")
-    menuGuiRef.BackColor := "000000"
-    menuGuiRef.Show("x0 y0 w" A_ScreenWidth " h" A_ScreenHeight)
+    menuGuiRef := Gui("+AlwaysOnTop -Caption +ToolWindow +LastFound")
+    menuGuiRef.BackColor := colBackground
+    menuGuiRef.Show("x0 y0 w" A_ScreenWidth " h" A_ScreenHeight " NoActivate")
     WinSetTransparent(bgAlpha, menuGuiRef)
+    
+    ; Add Center Label for visual feedback (initially empty)
+    global centerLabel := menuGuiRef.Add("Text", "x0 y" (centerY + radius + 30) " w" A_ScreenWidth " h40 Center BackgroundTrans cWhite", "")
+    centerLabel.SetFont("s16 Bold", "Segoe UI")
 
     ; Calculate positions
     count := items.Length
@@ -89,25 +105,46 @@ CreateMenuGui() {
         x := centerX + radius * Cos(rad) - (btnW // 2)
         y := centerY + radius * Sin(rad) - (btnH // 2)
         
-        ; Create styled button with HUD appearance
-        ctrl := menuGuiRef.Add("Button", "x" x " y" y " w" btnW " h" btnH, item.name)
-        ctrl.Font := "s" btnFontSize " Bold"
-        ctrl.BackColor := "2a3a5a"  ; Blue-tinted dark background
-        ctrl.SetFont("cFFFFFF", "s" btnFontSize " Bold")
+        ; Styled "Button" using Progress (background) and Text (label)
+        ; We use a Text control as the clickable element with a background color
+        
+        ; Create a "Container" Look
+        ctrl := menuGuiRef.Add("Text", "x" x " y" y " w" btnW " h" btnH " +0x200 +Center Background" colBtnNormal, item.icon "  " item.name)
+        ctrl.SetFont("s" btnFontSize " c" colTextNormal, "Segoe UI Semibold")
+        
+        ; Bind events
         ctrl.OnEvent("Click", Launch.Bind(item.target))
         
-        buttons.Push(ctrl)
+        ; Register for hover tracking
+        hoverControls[ctrl.Hwnd] := {
+            ctrl: ctrl, 
+            type: "btn", 
+            name: item.name,
+            normalBg: colBtnNormal,
+            hoverBg: colBtnHover,
+            normalFg: colTextNormal,
+            hoverFg: colTextHover
+        }
+        
         i += 1
     }
 
-    ; Create center close button (GTA-style)
-    closeBtn := menuGuiRef.Add("Button", "x" (centerX - centerSize//2) " y" (centerY - centerSize//2) " w" centerSize " h" centerSize, "✕")
-    closeBtn.Font := "s" centerFontSize " Bold"
-    closeBtn.BackColor := "3a2a2a"  ; Dark red background
-    closeBtn.SetFont("cFF6666", "s" centerFontSize " Bold")
+    ; Create center close button
+    closeBtn := menuGuiRef.Add("Text", "x" (centerX - centerSize//2) " y" (centerY - centerSize//2) " w" centerSize " h" centerSize " +0x200 +Center Background" colCenterNormal, "✕")
+    closeBtn.SetFont("s" centerFontSize " cWhite", "Segoe UI")
     closeBtn.OnEvent("Click", CloseMenu)
+    
+    hoverControls[closeBtn.Hwnd] := {
+        ctrl: closeBtn, 
+        type: "close", 
+        name: "Close",
+        normalBg: colCenterNormal,
+        hoverBg: colCenterHover,
+        normalFg: "White",
+        hoverFg: "White"
+    }
 
-    ; Create connecting lines (GTA weapon wheel style)
+    ; Create connecting lines (Visual only)
     CreateConnectingLines(menuGuiRef, centerX, centerY, radius, count, angleStep)
 
     ; Fade in animation
@@ -115,60 +152,81 @@ CreateMenuGui() {
 }
 
 CreateConnectingLines(gui, centerX, centerY, radius, count, angleStep) {
-    ; Create visual lines from center to each button (GTA-style)
-    ; Using thin rectangles positioned along the radius
-    lineThickness := 1
+    lineThickness := 2
     Loop count {
         angle := ((A_Index - 1) * angleStep) - 90
         rad := angle * (3.14159265 / 180)
         
-        ; Create multiple small segments to form a line
-        segments := 8
+        ; Draw line from near center to near button
+        startR := centerSize // 2 + 5
+        endR := radius - (btnH // 2) - 5
+        
+        len := endR - startR
+        segments := 10
+        
         Loop segments {
-            segmentPos := (A_Index / segments) * radius
-            segX := centerX + segmentPos * Cos(rad) - lineThickness // 2
-            segY := centerY + segmentPos * Sin(rad) - lineThickness // 2
+            pos := startR + (A_Index / segments) * len
+            lx := centerX + pos * Cos(rad) - lineThickness // 2
+            ly := centerY + pos * Sin(rad) - lineThickness // 2
             
-            ; Add subtle connecting line segment
-            lineCtrl := gui.Add("Text", "x" segX " y" segY " w" lineThickness " h" lineThickness " BackgroundTrans", "")
-            lineCtrl.BackColor := "333333"
+            gui.Add("Progress", "x" lx " y" ly " w" lineThickness " h" lineThickness " Background585B70 c585B70", 100)
         }
     }
 }
 
+OnHover(wParam, lParam, msg, hwnd) {
+    static lastHwnd := 0
+    global hoverControls, centerLabel
+    
+    if (hwnd != lastHwnd) {
+        ; Restore previous control if it was ours
+        if (lastHwnd && hoverControls.Has(lastHwnd)) {
+            prev := hoverControls[lastHwnd]
+            prev.ctrl.Opt("Background" prev.normalBg)
+            prev.ctrl.SetFont("c" prev.normalFg)
+            prev.ctrl.Redraw()
+        }
+        
+        ; Highlight new control if it is ours
+        if (hoverControls.Has(hwnd)) {
+            curr := hoverControls[hwnd]
+            curr.ctrl.Opt("Background" curr.hoverBg)
+            curr.ctrl.SetFont("c" curr.hoverFg)
+            curr.ctrl.Redraw()
+            
+            ; Update center label
+            try centerLabel.Text := curr.name
+        } else {
+             try centerLabel.Text := ""
+        }
+        
+        lastHwnd := hwnd
+    }
+}
+
 FadeIn(gui, targetAlpha) {
-    ; Simple fade-in effect
-    Loop 10 {
-        alpha := (targetAlpha * A_Index) // 10
+    ; Start invisible
+    WinSetTransparent(0, gui)
+    ; Fast fade in
+    Loop 5 {
+        alpha := (targetAlpha * A_Index) // 5
         try WinSetTransparent(alpha, gui)
-        Sleep 5
+        Sleep 10
     }
 }
 
 Launch(target, *) {
-    ; Close menu first
     CloseMenu()
-    
-    ; Small delay to ensure menu closes before launching
     Sleep(50)
-    
     try {
         if InStr(target, "http://") || InStr(target, "https://") {
-            ; Open URL in Brave browser
             bravePath := "C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
             if FileExist(bravePath) {
                 Run('"' bravePath '" "' target '"')
             } else {
-                ; Fallback to default browser if Brave not found
-                try {
-                    wsh := ComObject("WScript.Shell")
-                    wsh.Run(target)
-                } catch {
-                    Run('powershell.exe -Command "Start-Process ' target '"', , "Hide")
-                }
+                 Run(target)
             }
         } else {
-            ; Launch application
             Run(target)
         }
     } catch as err {
@@ -179,12 +237,11 @@ Launch(target, *) {
 CloseMenu(*) {
     global menuGuiRef
     if menuGuiRef != "" && IsObject(menuGuiRef) {
-        ; Fade out animation
         Loop 5 {
             try {
-                currentAlpha := WinGetTransparent(menuGuiRef)
-                if currentAlpha != "" && currentAlpha > 0
-                    WinSetTransparent(Max(0, currentAlpha - 40), menuGuiRef)
+                cur := WinGetTransparent(menuGuiRef)
+                if (cur > 0)
+                    WinSetTransparent(Max(0, cur - 50), menuGuiRef)
             }
             Sleep 10
         }
@@ -193,26 +250,11 @@ CloseMenu(*) {
     }
 }
 
-GuiGlobalClick(*) {
-    global menuGuiRef
-    if menuGuiRef = "" || !IsObject(menuGuiRef)
-        return
-
-    MouseGetPos(&mx, &my, &winID, &ctrlID)
-    if winID != menuGuiRef.Hwnd {
-        CloseMenu()
-    } else if ctrlID = ""
-        CloseMenu()
-}
-
-; --- Close on Right click or ESC (only when menu is open) ---
 RButton:: {
     global menuGuiRef
-    ; Only close menu if it's open, otherwise allow normal right-click
     if menuGuiRef != "" && IsObject(menuGuiRef) {
         CloseMenu()
     } else {
-        ; Pass through right-click to system
         Send("{RButton}")
     }
 }
