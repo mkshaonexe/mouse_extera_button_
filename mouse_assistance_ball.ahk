@@ -10,6 +10,20 @@ SetWorkingDir A_ScriptDir
 ; GitHub: https://github.com/mkshaonexe/mouse_extera_button_
 ; ============================================================
 
+; --- Auto-Start Logic (Install to Startup) ---
+if A_IsCompiled {
+    shortcutPath := A_Startup "\MouseAssistanceBall.lnk"
+    if !FileExist(shortcutPath) {
+        try {
+            FileCreateShortcut(A_ScriptFullPath, shortcutPath)
+            MsgBox("Installation Complete! `nMouse Assistance Ball will now start automatically with Windows.", "Auto-Start Enabled", "Iconi")
+        } catch as err {
+            MsgBox("Could not enable auto-start.`nError: " err.Message, "Installation Error", "Icon!")
+        }
+    }
+}
+; ---------------------------------------------
+
 ; ------------------------------------------------------------
 ; Mouse Button Remaps
 ; ------------------------------------------------------------

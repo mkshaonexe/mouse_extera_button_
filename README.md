@@ -42,26 +42,16 @@ The radial menu includes 6 customizable slots:
 
 ## 🚀 Installation
 
-### Prerequisites
-- Windows 10/11
-- [AutoHotkey v2.0+](https://www.autohotkey.com/) installed
+### Option 1: The Easy Way (Executable) 🌟
+1. **Download** `MouseAssistanceBall.exe` from this repository.
+2. **Run it once**.
+   - It will automatically install itself to start with Windows.
+   - No other software needed!
 
-### Setup Steps
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/mkshaonexe/mouse_extera_button_.git
-   cd mouse_extera_button_
-   ```
-
-2. **Run the script**
-   - Double-click `mouse_assistance_ball.ahk`
-   - Or right-click → "Run Script"
-
-3. **Run on Startup (Optional)**
-   - Press `Win + R`
-   - Type `shell:startup` and press Enter
-   - Create a shortcut to `mouse_assistance_ball.ahk` in this folder
+### Option 2: Script Method
+If you want to modify the code:
+1. Install [AutoHotkey v2.0+](https://www.autohotkey.com/).
+2. Run `mouse_assistance_ball.ahk`.
 
 ## ⚙️ Customization
 
