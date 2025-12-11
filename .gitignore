@@ -1,0 +1,8 @@
+# AutoHotkey compiled executables
+*.exe
+
+# Windows thumbnail cache
+Thumbs.db
+
+# AutoHotkey backup files
+*.bak
